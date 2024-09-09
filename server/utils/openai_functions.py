@@ -10,6 +10,10 @@ import requests
 
 load_dotenv()
 
+
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+print(OPENAI_API_KEY, "OPAPIK")
+
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
 )
@@ -55,7 +59,6 @@ def create_completion_openai(system_prompt: str, user_message: str):
     return completion.choices[0].message.content
 
 
-
 async def generate_speech_stream(
     text: str,
     output_path: str,
@@ -69,7 +72,6 @@ async def generate_speech_stream(
             response.stream_to_file(output_file.name)
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-
 
 
 def generate_speech_api(
