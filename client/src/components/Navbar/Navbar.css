@@ -1,0 +1,37 @@
+/* General Navbar Styles */
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    background-color: #333;
+    color: #fff;
+    font-family: 'Nerko One', cursive;
+}
+
+/* Navbar Title */
+.navbar h1 {
+    font-size: 2rem;
+    margin: 0;
+}
+
+/* Navbar Links */
+.navbar section:last-child {
+    display: flex;
+    gap: 1rem;
+}
+
+/* Navbar Buttons */
+.navbar span {
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+/* Button Hover Effect */
+.navbar span:hover {
+    border-color: #fff;
+    background-color: #555;
+    border-radius: 5px;
+}

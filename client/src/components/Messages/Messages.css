@@ -1,0 +1,37 @@
+.chat {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+    padding-bottom: 200px;
+    max-width: 600px;
+    margin: 0 auto;
+    font-family: Arial, sans-serif;
+  }
+  
+  .user-message, .bot-message {
+    padding: 10px 15px;
+    border-radius: 20px;
+    max-width: 80%;
+    min-width: 200px; /* Añadido para asegurar un tamaño mínimo */
+    word-wrap: break-word;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .user-message {
+    align-self: flex-end;
+    background-color: #DCF8C6;
+    color: #000;
+  }
+  
+  .bot-message {
+    align-self: flex-start;
+    background-color: #F1F0F0;
+    color: #000;
+  }
+  
+  audio {
+    margin-top: 10px;
+    width: 100%;
+  }
+  
