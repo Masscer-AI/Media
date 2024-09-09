@@ -1,4 +1,3 @@
-
 # Lets Practice Project
 
 An app to practice any type of conversation, where you can use one or several AIs as a language tutor, practice interviews, or simply chat as you would with a friend.
@@ -6,34 +5,38 @@ An app to practice any type of conversation, where you can use one or several AI
 ## Installation (first time)
 
 1. Create a virtual environment:
-    ```bash
-    py -m venv venv
-    ```
+   ```bash
+   py -m venv venv
+   ```
 2. Activate the virtual environment:
-    ```bash
-    source venv/Scripts/activate
-    ```
+   ```bash
+   source venv/Scripts/activate
+   ```
 3. Install the dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
+   ```bash
+   pip install -r requirements.txt
+   ```
 4. Install Node.js dependencies:
-    ```bash
-    npm i
-    ```
+   ```bash
+   npm i
+   ```
 5. Build the project:
-    ```bash
-    npm run build
-    ```
+   ```bash
+   npm run build
+   ```
+6. Add you environment variables
+```bash
+cp .env.example .env
+```
+7. Add the environment variable of the .env file
 
 ## Run the project (always)
 
 1. Activate the virtual environment:
-    ```bash
-    source venv/Scripts/activate
-    ```
+   ```bash
+   source venv/Scripts/activate
+   ```
 2. Run the main file:
-    ```bash
-    python main.py
-    ```
-
+   ```bash
+   python main.py
+   ```
