@@ -1,3 +1,4 @@
+# main.py
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -7,10 +8,11 @@ from server.utils.openai_functions import (
     create_completion_openai,
     generate_speech_stream,
 )
-
 import uvicorn
 import os
-
+from contextlib import asynccontextmanager
+from database import database, Base, Conversation, Message, Audio  # Importar desde el nuevo módulo
+from datetime import datetime  # Asegurarse de importar datetime
 
 def get_system_prompt(context: str):
     SYSTEM_PROMPT = f"""
@@ -25,8 +27,13 @@ Continue the conversation naturally
 """
     return SYSTEM_PROMPT
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await database.connect()
+    yield
+    await database.disconnect()
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 SUPPORTED_FORMATS = {
     "flac",
@@ -45,18 +52,15 @@ AUDIO_DIR = "audios"
 # Crear el directorio /audios si no existe
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
-
 # Definir el modelo de datos para la solicitud de generación de discurso
 class SpeechRequest(BaseModel):
     text: str
-
 
 @app.post("/generate_speech/")
 async def generate_speech(request: SpeechRequest):
     output_path = os.path.join(AUDIO_DIR, "output.mp3")
     await generate_speech_stream(request.text, output_path)
     return FileResponse(output_path, media_type="audio/mpeg", filename="output.mp3")
-
 
 @app.post("/upload-audio/")
 async def upload_audio(file: UploadFile = File(...)):
@@ -71,22 +75,49 @@ async def upload_audio(file: UploadFile = File(...)):
     with open(audio_file_path, "rb") as audio_file:
         transcription = transcribe_audio(audio_file)
 
+    # Guardar en la base de datos
+    async with database.transaction():
+        query = Audio.__table__.insert().values(filename=file.filename, transcription=transcription)
+        await database.execute(query)
+
     return {
         "file_size": os.path.getsize(audio_file_path),
         "transcription": transcription,
     }
 
-
 class CompletionRequest(BaseModel):
     message: str
     context: str
 
-
 @app.post("/get_completion/")
 async def get_completion(request: CompletionRequest):
     response = create_completion_openai(get_system_prompt(context=request.context), request.message)
-    return {"response": response}
 
+    # Guardar en la base de datos
+    async with database.transaction():
+        # Crear una nueva conversación si no existe
+        conversation_query = Conversation.__table__.insert().values()
+        conversation_id = await database.execute(conversation_query)
+
+        # Guardar el mensaje del usuario
+        user_message_query = Message.__table__.insert().values(
+            conversation_id=conversation_id,
+            sender="user",
+            text=request.message,
+            timestamp=datetime.utcnow()
+        )
+        await database.execute(user_message_query)
+
+        # Guardar la respuesta del asistente
+        assistant_message_query = Message.__table__.insert().values(
+            conversation_id=conversation_id,
+            sender="assistant",
+            text=response,
+            timestamp=datetime.utcnow()
+        )
+        await database.execute(assistant_message_query)
+
+    return {"response": response}
 
 app.mount("/", StaticFiles(directory="client/dist", html=True), name="dist")
 

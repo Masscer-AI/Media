@@ -26,3 +26,5 @@ dist-ssr
 venv
 __pycache__
 .env
+
+test.db
