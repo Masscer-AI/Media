@@ -1,0 +1,64 @@
+
+  
+  .signup-component {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+  }
+  
+  .simple-form {
+    background-color: #ffffff;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .simple-form:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  }
+  
+  .simple-form-title {
+    margin-bottom: 20px;
+    color: #333;
+  }
+  
+  .simple-form-group {
+    margin-bottom: 15px;
+  }
+  
+  .simple-form-label {
+    display: block;
+    margin-bottom: 5px;
+    color: #555;
+  }
+  
+  .simple-form-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: transparent;
+    transition: border-color 0.3s ease;
+    color: var(--text-font-color);
+    color: black;
+  }
+  
+  .simple-form-input:focus {
+    border-color: #e7e7e7;
+  }
+  
+  .simple-form-button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  
+  .simple-form-button:hover {
+    background-color: var(--active-color);
+  }

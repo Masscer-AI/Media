@@ -8,25 +8,6 @@ import { ChatMessages } from "../../components/Messages/Messages";
 export default function Root() {
   const [chat, setChat] = useState<ChatItem[]>([]);
 
-  // useEffect(() => {
-  //   // Agregar mensajes de ejemplo al cargar el componente
-  //   const exampleMessages: ChatItem[] = [
-  //     { text: "Hola, ¿cómo estás?", isUser: true },
-  //     {
-  //       text: "Estoy bien, gracias. ¿Y tú?",
-  //       isUser: false,
-  //       audioSrc: "/public/start.mp3",
-  //     },
-  //     { text: "También estoy bien, gracias por preguntar.", isUser: true },
-  //     {
-  //       text: "¿En ?",
-  //       isUser: false,
-  //       audioSrc: "/public/start.mp3",
-  //     },
-  //   ];
-  //   setChat(exampleMessages);
-  // }, []);
-
   const processAudioExample = async (
     audioFile: Blob,
     transcription: string

@@ -1,15 +1,11 @@
 import os
-
 from openai import OpenAI
 from dotenv import load_dotenv
 import requests
 
-
 # from pydub import AudioSegment
 
-
 load_dotenv()
-
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
@@ -26,21 +22,6 @@ def transcribe_audio(audio_file, output_format="verbose_json") -> str:
     if output_format == "vtt":
         return transcription
     return transcription.text
-
-
-# def translate_transcription(transcription: str, target_language="English"):
-#     completion = client.chat.completions.create(
-#         model="gpt-4-vision-preview",
-#         max_tokens=2000,
-#         messages=[
-#             {
-#                 "role": "system",
-#                 "content": f"You are translator and video editor. You will receive a transcription of a video. Your task is to provide the {target_language} version with the same meaning. The resulting script should be coherent and consistent. Make sure of correcting inconsistencies, keep in mind that the video is a tutorial of an coding exercise of Learnpack, a tool to learn coding skills",
-#             },
-#             {"role": "user", "content": transcription},
-#         ],
-#     )
-#     return completion.choices[0].message.content
 
 
 def create_completion_openai(system_prompt: str, user_message: str):
@@ -100,3 +81,22 @@ def generate_speech_api(
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
         return b""
+
+
+def generate_image(
+    prompt: str,
+    model: str = "dall-e-3",
+    size: str = "1024x1024",
+    quality: str = "standard",
+    n: int = 1,
+) -> str:
+    response = client.images.generate(
+        model=model,
+        prompt=prompt,
+        size=size,
+        quality=quality,
+        n=n,
+    )
+
+    image_url = response.data[0].url
+    return image_url
