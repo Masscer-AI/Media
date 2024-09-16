@@ -1,0 +1,19 @@
+
+.chat-message {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 4px;
+  }
+  
+  .chat-message.user {
+    background-color: #007bff;
+    color: #fff;
+    align-self: flex-end;
+  }
+  
+  .chat-message.assistant {
+    background-color: #e9ecef;
+    color: #333;
+    align-self: flex-start;
+  }
+  

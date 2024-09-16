@@ -1,6 +1,6 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
+from fastapi import APIRouter, File, UploadFile, HTTPException, Request, Depends
 from pydantic import BaseModel
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from server.utils.openai_functions import (
     transcribe_audio,
     create_completion_openai,
@@ -33,6 +33,7 @@ AUDIO_DIR = "audios"
 # Cambiar bcrypt por argon2
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
+
 def get_system_prompt(context: str):
     SYSTEM_PROMPT = f"""
 You are an useful conversational assistant. You answers must be as shorter as you can to avoid too much time while generating answers. You must keep in mind that your answer will be spoken by another AI model. Keep it simple and useful.
@@ -46,6 +47,7 @@ Continue the conversation naturally
 """
     return SYSTEM_PROMPT
 
+
 def get_db():
     db = SessionLocal()
     try:
@@ -53,15 +55,18 @@ def get_db():
     finally:
         db.close()
 
+
 # Definir el modelo de datos para la solicitud de generación de discurso
 class SpeechRequest(BaseModel):
     text: str
+
 
 @router.post("/generate_speech/")
 async def generate_speech(request: SpeechRequest):
     output_path = os.path.join(AUDIO_DIR, "output.mp3")
     await generate_speech_stream(request.text, output_path)
     return FileResponse(output_path, media_type="audio/mpeg", filename="output.mp3")
+
 
 @router.post("/upload-audio/")
 async def upload_audio(file: UploadFile = File(...)):
@@ -88,9 +93,11 @@ async def upload_audio(file: UploadFile = File(...)):
         "transcription": transcription,
     }
 
+
 class CompletionRequest(BaseModel):
     message: str
     context: str
+
 
 @router.post("/get_completion/")
 async def get_completion(request: CompletionRequest):
@@ -124,14 +131,17 @@ async def get_completion(request: CompletionRequest):
 
     return {"response": response}
 
+
 class UserLogin(BaseModel):
     email: str
     password: str
+
 
 class UserCreate(BaseModel):
     username: str
     email: str
     password: str
+
 
 @router.post("/signup/")
 async def signup(user: UserCreate, db: Session = Depends(get_db)):
@@ -142,6 +152,7 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(db_user)
     return {"message": "User created successfully"}
 
+
 @router.post("/login/")
 async def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
@@ -149,10 +160,48 @@ async def login(user: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid email or password")
     return {"message": "Login successful"}
 
+
 class ImageRequest(BaseModel):
     prompt: str
+
 
 @router.post("/generate_image/")
 async def generate_image_route(request: ImageRequest):
     image_url = generate_image(request.prompt)
     return {"image_url": image_url}
+
+
+@router.get("/", response_class=HTMLResponse)
+async def get_root(request: Request):
+    file_path = os.path.join("client", "dist", "index.html")
+    if os.path.exists(file_path):
+        with open(file_path, "r") as file:
+            html_content = file.read()
+
+        # Get the data for the page or use defaults if the page_name is not found
+        # data = routes_meta["defaults"]
+
+        # Replace placeholders in the HTML content with actual data
+        # for key, value in data.items():
+
+        #     placeholder = f"{{{{{key}}}}}"
+        #     html_content = html_content.replace(placeholder, value)
+
+        return HTMLResponse(content=html_content)
+    return HTMLResponse(content="Page not found", status_code=404)
+
+
+@router.get("/{page_name}", response_class=HTMLResponse)
+async def get_page(request: Request, page_name: str):
+    file_path = os.path.join("client", "dist", "index.html")
+    if os.path.exists(file_path):
+        with open(file_path, "r") as file:
+            html_content = file.read()
+        # data = routes_meta.get(page_name, routes_meta["defaults"])
+
+        # for key, value in data.items():
+        #     placeholder = f"{{{{{key}}}}}"
+        #     html_content = html_content.replace(placeholder, value)
+
+        return HTMLResponse(content=html_content)
+    return HTMLResponse(content="Page not found", status_code=404)

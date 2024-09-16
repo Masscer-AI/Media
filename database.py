@@ -7,6 +7,7 @@ from sqlalchemy import (
     Text,
     ForeignKey,
     DateTime,
+    Float,  # Import Float for billing_ratio
 )
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from databases import Database
@@ -50,6 +51,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     organizations = relationship("Organization", back_populates="owner")
+    model_settings = relationship("ModelSetting", back_populates="user")  # New relationship
 
 
 class Organization(Base):
@@ -61,6 +63,8 @@ class Organization(Base):
     config = relationship(
         "OrganizationConfig", uselist=False, back_populates="organization"
     )
+    billing_ratio = Column(Float, default=1.20)  # New field
+    consumption_periods = relationship("ConsumptionPeriod", back_populates="organization")  # New relationship
 
 
 class OrganizationConfig(Base):
@@ -71,4 +75,34 @@ class OrganizationConfig(Base):
     organization = relationship("Organization", back_populates="config")
 
 
+class ModelSetting(Base):
+    __tablename__ = "model_settings"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    setting_name = Column(String, nullable=False)
+    setting_value = Column(Text, nullable=False)
+    user = relationship("User", back_populates="model_settings")
+
+
+class ConsumptionPeriod(Base):
+    __tablename__ = "consumption_periods"
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
+    started_at = Column(DateTime, nullable=False)
+    ended_at = Column(DateTime, nullable=True)
+    status = Column(String, nullable=False, default="OPEN")  # OPEN, BILLED
+    organization = relationship("Organization", back_populates="consumption_periods")
+    consumption_items = relationship("ConsumptionItem", back_populates="consumption_period")
+
+
+class ConsumptionItem(Base):
+    __tablename__ = "consumption_items"
+    id = Column(Integer, primary_key=True, index=True)
+    consumption_period_id = Column(Integer, ForeignKey("consumption_periods.id"), nullable=False)
+    description = Column(Text, nullable=False)
+    amount = Column(Float, nullable=False)
+    consumption_period = relationship("ConsumptionPeriod", back_populates="consumption_items")
+
+
 Base.metadata.create_all(bind=engine)
+ 
