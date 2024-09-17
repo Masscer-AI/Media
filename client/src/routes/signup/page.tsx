@@ -11,7 +11,7 @@ export default function Signup() {
   const [isLogin, setIsLogin] = useState(true);
   const [message, setMessage] = useState("");
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,14 +22,15 @@ export default function Signup() {
     try {
       const response = await axios.post(endpoint, payload);
       setMessage(response.data.message);
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+      }
       if (!isLogin) {
         toast.success("User created successfully!");
+      } else {
+        toast.success("Successfully logged in!");
       }
-      else {
-        toast.success("Succesfully logged in!")
-
-      }
-      navigate("/chat")
+      navigate("/chat");
     } catch (error) {
       setMessage(error.response?.data?.detail || "An error occurred");
       toast.error("An error occurred");

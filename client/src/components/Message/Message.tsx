@@ -1,4 +1,5 @@
 import React from "react";
+import { SVGS } from "../../assets/svgs";
 
 interface MessageProps {
   sender: string;
@@ -20,8 +21,8 @@ export const Message: React.FC<MessageProps> = ({
       <p>{text}</p>
       {imageUrl && <img src={imageUrl} alt="Generated" />}
       <div className="message-buttons">
-        <button onClick={() => onGenerateSpeech(text)}>Generate Speech</button>
-        <button onClick={() => onGenerateImage(text)}>Generate Image</button>
+        <button onClick={() => onGenerateSpeech(text)}>{SVGS.waves}</button>
+        <button onClick={() => onGenerateImage(text)}>{SVGS.image}</button>
       </div>
     </div>
   );

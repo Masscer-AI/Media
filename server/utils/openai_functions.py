@@ -24,10 +24,12 @@ def transcribe_audio(audio_file, output_format="verbose_json") -> str:
     return transcription.text
 
 
-def create_completion_openai(system_prompt: str, user_message: str):
+def create_completion_openai(
+    system_prompt: str, user_message: str, model="gpt-4o-mini"
+):
     completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        max_tokens=200,
+        model=model,
+        max_tokens=500,
         messages=[
             {
                 "role": "system",

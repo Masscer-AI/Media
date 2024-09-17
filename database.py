@@ -7,11 +7,12 @@ from sqlalchemy import (
     Text,
     ForeignKey,
     DateTime,
-    Float,  # Import Float for billing_ratio
+    Float,
+    Boolean,
 )
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from databases import Database
-from datetime import datetime
+from datetime import datetime, timedelta
 
 DATABASE_URL = "sqlite:///./test.db"
 
@@ -24,7 +25,9 @@ Base = declarative_base()
 class Conversation(Base):
     __tablename__ = "conversations"
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     messages = relationship("Message", back_populates="conversation")
+    user = relationship("User", back_populates="conversations")
 
 
 class Message(Base):
@@ -51,7 +54,10 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     organizations = relationship("Organization", back_populates="owner")
-    model_settings = relationship("ModelSetting", back_populates="user")  # New relationship
+    model_settings = relationship("ModelSetting", back_populates="user")
+    conversations = relationship(
+        "Conversation", back_populates="user"
+    )  # New relationship
 
 
 class Organization(Base):
@@ -64,7 +70,9 @@ class Organization(Base):
         "OrganizationConfig", uselist=False, back_populates="organization"
     )
     billing_ratio = Column(Float, default=1.20)  # New field
-    consumption_periods = relationship("ConsumptionPeriod", back_populates="organization")  # New relationship
+    consumption_periods = relationship(
+        "ConsumptionPeriod", back_populates="organization"
+    )  # New relationship
 
 
 class OrganizationConfig(Base):
@@ -92,17 +100,42 @@ class ConsumptionPeriod(Base):
     ended_at = Column(DateTime, nullable=True)
     status = Column(String, nullable=False, default="OPEN")  # OPEN, BILLED
     organization = relationship("Organization", back_populates="consumption_periods")
-    consumption_items = relationship("ConsumptionItem", back_populates="consumption_period")
+    consumption_items = relationship(
+        "ConsumptionItem", back_populates="consumption_period"
+    )
 
 
 class ConsumptionItem(Base):
     __tablename__ = "consumption_items"
     id = Column(Integer, primary_key=True, index=True)
-    consumption_period_id = Column(Integer, ForeignKey("consumption_periods.id"), nullable=False)
+    consumption_period_id = Column(
+        Integer, ForeignKey("consumption_periods.id"), nullable=False
+    )
     description = Column(Text, nullable=False)
     amount = Column(Float, nullable=False)
-    consumption_period = relationship("ConsumptionPeriod", back_populates="consumption_items")
+    consumption_period = relationship(
+        "ConsumptionPeriod", back_populates="consumption_items"
+    )
+
+
+class Token(Base):
+    __tablename__ = "tokens"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token = Column(String, unique=True, nullable=False)
+    is_permanent = Column(Boolean, default=False)
+    expiration_date = Column(DateTime, nullable=True)
+    user = relationship("User", back_populates="tokens")
+
+    def __init__(self, user_id, token, is_permanent=False):
+        self.user_id = user_id
+        self.token = token
+        self.is_permanent = is_permanent
+        if not is_permanent:
+            self.expiration_date = datetime.utcnow() + timedelta(days=3)
+
+
+User.tokens = relationship("Token", back_populates="user")
 
 
 Base.metadata.create_all(bind=engine)
- 

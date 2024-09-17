@@ -4,7 +4,9 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import Root from "./routes/root/page.tsx";
 import { rootLoader } from "./routes/root/loader.ts";
-
+import { 
+  chatLoader
+ } from "./routes/chat/loader.ts";
 import "./index.css";
 import Signup from "./routes/signup/page.tsx";
 import ChatView from "./routes/chat/page.tsx";
@@ -29,6 +31,7 @@ const router = createBrowserRouter([
   {
     path: "/chat",
     element: <ChatView />,
+    loader: chatLoader
   },
 ]);
 

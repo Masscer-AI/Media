@@ -1,5 +1,5 @@
 /* styles.css */
-.chat-view {
+.chat-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -12,28 +12,33 @@
 }
 
 .chat-messages {
-  flex: 1;
-  
   overflow-y: auto;
   background-color: transparent;
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  padding-bottom: 300px;
+  scrollbar-width: none;
 }
-
 
 .message {
   margin-bottom: 15px;
   padding: 10px;
   border-radius: 8px;
-  background-color: #3e3e3e;
 }
-
-.message.assistant {
-  background-color: #007bff;
-  color: #fff;
+.message:hover .message-buttons {
+  visibility: visible;
 }
 
 .message.user {
-  background-color: #444;
+  align-self: flex-end;
+}
+
+.message.user p {
+  background-color: #262626;
+  padding: 10px 15px;
+  width: fit-content;
+  border-radius: 50vh;
   color: #fff;
 }
 
@@ -45,20 +50,48 @@
 
 .message-buttons {
   display: flex;
+  visibility: hidden;
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 20px;
+  transition: all 100ms;
 }
 
 .message-buttons button {
-  padding: 5px 10px;
-  background-color: #007bff;
-  color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   transition: background-color 0.3s;
+}
+.message-buttons button svg {
+  width: 20px;
 }
 
 .message-buttons button:hover {
   background-color: #0056b3;
+}
+
+.chat-header {
+  display: flex;
+}
+
+.chat-header select {
+  height: 100%;
+  background-color: transparent;
+}
+.chat-header button {
+  padding: 5px;
+  background-color: transparent;
+  border: 0;
+}
+.chat-header svg path {
+  stroke: white;
+}
+
+.chat-header select option {
+  background-color: rgb(32, 32, 32);
 }
