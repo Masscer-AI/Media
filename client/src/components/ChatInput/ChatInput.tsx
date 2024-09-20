@@ -1,21 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { SVGS } from "../../assets/svgs";
 import { v4 as uuidv4 } from "uuid";
+import { useStore } from "../../modules/store"; // Import the store
 import "./ChatInput.css";
 
 interface ChatInputProps {
-  input: string;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
   handleSendMessage: () => void;
   handleKeyDown: (event: any) => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
-  input,
-  setInput,
   handleSendMessage,
   handleKeyDown,
 }) => {
+  const { input, setInput } = useStore(); 
   const [attachments, setAttachments] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {

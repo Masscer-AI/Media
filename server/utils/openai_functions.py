@@ -2,6 +2,7 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 import requests
+from ..logger import logger
 
 # from pydub import AudioSegment
 
@@ -40,6 +41,80 @@ def create_completion_openai(
     )
     return completion.choices[0].message.content
 
+
+import asyncio
+
+async def create_streaming_completion(
+    system_prompt: str, user_message: str, model="gpt-4o-mini"
+):
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=500,
+        stream=True,
+        messages=[
+            {
+                "role": "system",
+                "content": system_prompt,
+            },
+            {"role": "user", "content": user_message},
+        ],
+    )
+    for chunk in response:
+        content = chunk.choices[0].delta.content
+
+        print(chunk)
+        logger.debug(chunk.choices[0])
+        if isinstance(content, str):
+            yield content
+        else:
+            logger.debug(f"The content is not a string is: {content}")
+
+
+
+async def stream_completion(prompt, user_message, model="gpt-4o-mini", imageB64=""):
+    logger.debug(f"MODEL TO COMPLETE: {model}")
+    content = user_message
+
+    if imageB64 != "" and imageB64 is not None:
+        if model not in [
+            "gpt-4-vision-preview",
+            "gpt-4",
+            "gpt-4o",
+            "gpt-4-turbo",
+            "gpt=4o-mini",
+        ]:
+            model = "gpt-4o"
+        logger.info(f"Image detected, using {model} model")
+
+        content = [
+            {"type": "text", "text": user_message},
+            {"type": "image_url", "image_url": {"url": imageB64}},
+        ]
+
+    max_tokens = 4000
+    if model == "gpt-4o-mini":
+        max_tokens = 10000
+
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=max_tokens,
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": content},
+        ],
+        temperature=0.5,
+        stream=True,
+    )
+
+    for chunk in response:
+        if chunk.choices[0].delta.content:
+            yield chunk.choices[0].delta.content
+
+
+
+async def async_create_streaming_completion(*args, **kwargs):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, create_streaming_completion, *args, **kwargs)
 
 async def generate_speech_stream(
     text: str,
@@ -92,13 +167,16 @@ def generate_image(
     quality: str = "standard",
     n: int = 1,
 ) -> str:
-    response = client.images.generate(
-        model=model,
-        prompt=prompt,
-        size=size,
-        quality=quality,
-        n=n,
-    )
-
-    image_url = response.data[0].url
-    return image_url
+    try:
+        response = client.images.generate(
+            model=model,
+            prompt=prompt,
+            size=size,
+            quality=quality,
+            n=n,
+        )
+        image_url = response.data[0].url
+        return image_url
+    except Exception as e:
+        print(e)
+        return f"Error generating image: {e}"

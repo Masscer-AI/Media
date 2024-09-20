@@ -1,6 +1,6 @@
 from .ollama_functions import create_completion_ollama
 from .openai_functions import create_completion_openai
-
+from .anthropic_functions import make_message_request
 
 def create_completion(provider: str, model: str, system_prompt: str, user_message: str):
     print("Generating completion with ", provider)
@@ -11,9 +11,13 @@ def create_completion(provider: str, model: str, system_prompt: str, user_messag
     if provider == "ollama":
         res = create_completion_ollama(system_prompt, user_message, model=model)
 
+    make_message_request()
     return res
 
 
+
+def create_streaming_completion(provider: str, model: str, system_prompt: str, user_message: str):
+    pass
 
 
 def get_system_prompt(context: str):

@@ -1,9 +1,11 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Request, Depends, Header
 from pydantic import BaseModel
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from server.utils.openai_functions import (
     transcribe_audio,
     create_completion_openai,
+    async_create_streaming_completion,
+    stream_completion,
     generate_speech_stream,
     generate_image,
 )
@@ -110,23 +112,26 @@ class CompletionRequest(BaseModel):
     model: Model
 
 
-# routes.py
-
-
 @router.post("/get_completion/")
 async def get_completion(
     request: CompletionRequest,
     token: Token = Depends(verify_token),
     db: Session = Depends(get_db),
 ):
-    res = create_completion(
-        request.model.provider,
-        request.model.name,
-        get_system_prompt(context=request.context),
-        request.message,
-    )
+    system_prompt = get_system_prompt(context=request.context)
 
-    # Guardar en la base de datos
+    complete_response = ""
+
+    async def event_generator():
+        async for chunk in stream_completion(
+            system_prompt,
+            request.message,
+            model=request.model.name,
+        ):
+            complete_response += chunk
+            yield chunk
+
+    
     async with database.transaction():
         # Crear una nueva conversación si no existe
         conversation_query = Conversation.__table__.insert().values(
@@ -144,15 +149,15 @@ async def get_completion(
         await database.execute(user_message_query)
 
         # Guardar la respuesta del asistente
-        assistant_message_query = Message.__table__.insert().values(
-            conversation_id=conversation_id,
-            sender="assistant",
-            text=res,
-            timestamp=datetime.utcnow(),
-        )
-        await database.execute(assistant_message_query)
+        # assistant_message_query = Message.__table__.insert().values(
+        #     conversation_id=conversation_id,
+        #     sender="assistant",
+        #     text="".join([chunk async for chunk in response_chunks]),
+        #     timestamp=datetime.utcnow(),
+        # )
+        # await database.execute(assistant_message_query)
 
-    return {"response": res}
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 class UserLogin(BaseModel):
@@ -200,6 +205,7 @@ async def generate_image_route(
     request: ImageRequest, token: Token = Depends(verify_token)
 ):
     image_url = generate_image(request.prompt)
+    print(image_url)
     return {"image_url": image_url}
 
 
@@ -254,6 +260,57 @@ async def get_user_conversations(
         serialized_conversations.append(serialized_conversation)
 
     return serialized_conversations
+
+
+class MessageResponse(BaseModel):
+    id: int
+    sender: str
+    text: str
+    timestamp: datetime
+
+
+class ConversationDetailResponse(BaseModel):
+    id: int
+    user_id: int
+    messages: List[MessageResponse]
+
+    class Config:
+        from_attributes = True
+
+
+@router.get(
+    "/conversation/{conversation_id}", response_model=ConversationDetailResponse
+)
+async def get_conversation(
+    conversation_id: int,
+    token: Token = Depends(verify_token),
+    db: Session = Depends(get_db),
+):
+    conversation = (
+        db.query(Conversation)
+        .filter(
+            Conversation.id == conversation_id, Conversation.user_id == token.user_id
+        )
+        .first()
+    )
+
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    messages = (
+        db.query(Message).filter(Message.conversation_id == conversation_id).all()
+    )
+
+    return ConversationDetailResponse(
+        id=conversation.id,
+        user_id=conversation.user_id,
+        messages=[
+            MessageResponse(
+                id=msg.id, sender=msg.sender, text=msg.text, timestamp=msg.timestamp
+            )
+            for msg in messages
+        ],
+    )
 
 
 @router.get("/{page_name}", response_class=HTMLResponse)

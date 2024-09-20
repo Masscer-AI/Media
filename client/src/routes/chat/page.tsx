@@ -1,73 +1,101 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import io from "socket.io-client";
 import "./page.css";
 import { Message } from "../../components/Message/Message";
 import { ChatInput } from "../../components/ChatInput/ChatInput";
 import { SVGS } from "../../assets/svgs";
 import { useLoaderData } from "react-router-dom";
 import { Sidebar } from "../../components/Sidebar/Sidebar";
+import { Counter, useStore } from "../../modules/store";
 
-interface Message {
+export type TMessage = {
   sender: string;
   text: string;
   imageUrl?: string;
-}
-
-interface Model {
-  name: string;
-  provider: string;
-}
+};
+const socket = io("http://localhost:8000");
 
 export default function ChatView() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState<string>("");
-  const [model, setModel] = useState<Model>({
-    name: "gpt-4o",
-    provider: "openai",
-  });
-  const [chatState, setChatState] = useState<{ isSidebarOpened: boolean }>({
-    isSidebarOpened: false,
-  });
+  const [messages, setMessages] = useState([] as TMessage[]);
 
+
+  const { chatState, toggleSidebar, input, setInput, model } = useStore();
   const loaderData = useLoaderData();
+
+  useEffect(() => {
+    socket.on("connect", () => {
+      console.log("Connected to socket server");
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected from socket server");
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("disconnect");
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateMessages = (chunk: string) => {
+      const newMessages = [...messages];
+      const lastMessage = newMessages[newMessages.length - 1];
+
+      if (lastMessage && lastMessage.sender === "assistant") {
+        lastMessage.text += chunk;
+      } else {
+        const assistantMessage = {
+          sender: "assistant",
+          text: chunk,
+        };
+        newMessages.push(assistantMessage);
+      }
+      return newMessages;
+    };
+
+    socket.on("response", (data) => {
+      setMessages((prevMessages) => updateMessages(data.chunk));
+    });
+
+    socket.on("responseFinished", (data) => {
+      console.log("Response finished:", data);
+      socket.disconnect()
+    });
+
+    return () => {
+      socket.off("response");
+      socket.off("responseFinished");
+    };
+  }, [messages]);
 
   const handleSendMessage = async () => {
     if (input.trim() === "") return;
+    socket.connect()
 
-    const userMessage: Message = { sender: "user", text: input };
+    const userMessage = { sender: "user", text: input };
     setMessages([...messages, userMessage]);
 
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        "/get_completion/",
-        {
-          message: input,
-          context: messages
-            .map((msg) => `${msg.sender}: ${msg.text}`)
-            .join("\n"),
-          model: model,
-        },
-        {
-          headers: {
-            Authorization: `Token ${token}`,
-          },
-        }
-      );
+      console.log(model, "MODEL IN STORE");
+      
 
-      const assistantMessage: Message = {
-        sender: "assistant",
-        text: response.data.response,
-      };
-      setMessages([...messages, userMessage, assistantMessage]);
+      const token = localStorage.getItem("token");
+      socket.emit("message", {
+        message: input,
+        context: messages.map((msg) => `${msg.sender}: ${msg.text}`).join("\n"),
+        model: model,
+        token: token,
+      });
+
+      setInput("");
     } catch (error) {
       console.error("Error sending message:", error);
     }
-
-    setInput("");
   };
 
-  const handleGenerateSpeech = async (text: string) => {
+  const handleGenerateSpeech = async (text) => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.post(
@@ -89,7 +117,7 @@ export default function ChatView() {
     }
   };
 
-  const handleGenerateImage = async (text: string) => {
+  const handleGenerateImage = async (text) => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.post(
@@ -103,7 +131,7 @@ export default function ChatView() {
       );
       const imageUrl = response.data.image_url;
 
-      const imageMessage: Message = {
+      const imageMessage = {
         sender: "assistant",
         text: "Generated Image",
         imageUrl,
@@ -114,30 +142,24 @@ export default function ChatView() {
     }
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (event) => {
     if (event.key === "Enter") {
       handleSendMessage();
+    } else {
+      setInput(event.target.value);
     }
   };
 
-  const toggleSidebar = () => {
-    setChatState((prevState) => ({
-      ...prevState,
-      isSidebarOpened: !prevState.isSidebarOpened,
-    }));
-  };
   return (
     <>
       {chatState.isSidebarOpened && <Sidebar toggleSidebar={toggleSidebar} />}
       <div className="chat-container">
         <ChatHeader
-          model={model}
-          setModel={setModel}
           toggleSidebar={toggleSidebar}
-        />
+        >
+          <Counter />
+        </ChatHeader>
         <ChatInput
-          input={input}
-          setInput={setInput}
           handleSendMessage={handleSendMessage}
           handleKeyDown={handleKeyDown}
         />
@@ -158,21 +180,8 @@ export default function ChatView() {
   );
 }
 
-interface ChatHeaderProps {
-  model: Model;
-  setModel: React.Dispatch<React.SetStateAction<Model>>;
-  toggleSidebar: () => void;
-}
-
-const ChatHeader: React.FC<ChatHeaderProps> = ({
-  model,
-  setModel,
-  toggleSidebar,
-}) => {
-  const [models, setModels] = useState<Model[]>([
-    { name: "gpt-4o", provider: "openai" },
-    { name: "gpt-4o-mini", provider: "openai" },
-  ]);
+const ChatHeader = ({ toggleSidebar, children }) => {
+  const { setModels, models, model, setModel } = useStore();
 
   useEffect(() => {
     getModels();
@@ -182,11 +191,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
     try {
       const response = await fetch("/get-models");
       const json = await response.json();
-      const ollamaModels = json.map((model: { name: string }) => ({
+      const ollamaModels = json.map((model) => ({
         name: model.name,
         provider: "ollama",
       }));
-      setModels((prevModels) => [...prevModels, ...ollamaModels]);
+      setModels([...models, ...ollamaModels]);
     } catch (e) {
       console.log(e);
     }
@@ -211,6 +220,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         ))}
       </select>
       <button>{SVGS.controls}</button>
+      {children}
     </div>
   );
 };
